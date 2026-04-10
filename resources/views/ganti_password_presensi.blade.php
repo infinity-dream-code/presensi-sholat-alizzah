@@ -103,7 +103,9 @@
         <div class="drawer-menu-label">Presensi Sholat</div>
         <ul class="drawer-menu">
             <li class="drawer-item"><a href="{{ route('presensi-sholat.qr') }}" class="drawer-link"><span class="icon"><i class="fas fa-qrcode"></i></span><span>Presensi Sholat</span></a></li>
+            @if(config('presensi.show_haid'))
             <li class="drawer-item"><a href="{{ route('presensi-haid.qr') }}" class="drawer-link"><span class="icon"><i class="fas fa-qrcode"></i></span><span>Presensi Haid</span></a></li>
+            @endif
             <li class="drawer-item"><a href="{{ route('presensi.log-marifah') }}" class="drawer-link"><span class="icon"><i class="fas fa-rectangle-list"></i></span><span>Log Marifah</span></a></li>
             <li class="drawer-item"><a href="{{ route('presensi.log-presensi') }}" class="drawer-link"><span class="icon"><i class="fas fa-square-check"></i></span><span>Log Presensi</span></a></li>
             <li class="drawer-item"><a href="{{ route('presensi.kelola') }}" class="drawer-link"><span class="icon"><i class="fas fa-arrows-rotate"></i></span><span>Kelola Presensi</span></a></li>

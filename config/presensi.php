@@ -18,5 +18,10 @@ return [
         'verify_ssl' => filter_var(env('PRESENSI_HTTP_VERIFY_SSL', true), FILTER_VALIDATE_BOOL),
     ],
 
+    /*
+     * Menu & route presensi haid. false = disembunyikan (aktifkan dengan PRESENSI_SHOW_HAID=true).
+     */
+    'show_haid' => filter_var(env('PRESENSI_SHOW_HAID', false), FILTER_VALIDATE_BOOL),
+
 ];
 

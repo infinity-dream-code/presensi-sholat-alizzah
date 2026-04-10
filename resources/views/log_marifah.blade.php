@@ -363,12 +363,14 @@
                 <span>Presensi Sholat</span>
             </a>
         </li>
+        @if(config('presensi.show_haid'))
         <li class="drawer-item">
             <a href="{{ route('presensi-haid.qr') }}" class="drawer-link">
                 <span class="icon"><i class="fas fa-qrcode"></i></span>
                 <span>Presensi Haid</span>
             </a>
         </li>
+        @endif
         <li class="drawer-item">
             <a href="{{ route('presensi.log-marifah') }}" class="drawer-link active">
                 <span class="icon"><i class="fas fa-rectangle-list"></i></span>

@@ -234,7 +234,7 @@
         <div class="content">
             <div class="card">
                 <h2>Presensi &amp; perizinan sholat</h2>
-                <p>Al-Izzah Batu — gunakan menu sidebar untuk QR presensi, log, kelola perizinan per waktu, dan rekap.</p>
+                <p>Al-Izzah Batu — gunakan menu sidebar untuk presensi RFID, log, kelola perizinan per waktu, dan rekap.</p>
             </div>
         </div>
     </div>
@@ -260,12 +260,14 @@
                     <span>Presensi Sholat</span>
                 </a>
             </li>
+            @if(config('presensi.show_haid'))
             <li class="drawer-item">
                 <a href="{{ route('presensi-haid.qr') }}" class="drawer-link">
                     <span class="icon"><i class="fas fa-qrcode"></i></span>
                     <span>Presensi Haid</span>
                 </a>
             </li>
+            @endif
             <li class="drawer-item">
                 <a href="{{ route('presensi.log-marifah') }}" class="drawer-link">
                     <span class="icon"><i class="fas fa-rectangle-list"></i></span>

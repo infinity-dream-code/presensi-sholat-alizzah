@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Presensi Sholat QR</title>
+    <title>Presensi Sholat — RFID</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * { box-sizing: border-box; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
         body {
             margin: 0;
             min-height: 100vh;
@@ -140,6 +151,61 @@
             text-align: center;
             background: #fff7ff;
         }
+        .qr-scanner-hidden {
+            display: none !important;
+        }
+        .rfid-panel-hidden {
+            display: none !important;
+        }
+        .rfid-panel {
+            min-height: calc(100vh - 92px);
+            padding: 28px 20px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            background: linear-gradient(180deg, #faf5ff 0%, #fff7ff 100%);
+        }
+        .rfid-panel-icon {
+            font-size: 2.75rem;
+            color: #a855f7;
+            line-height: 1;
+        }
+        .rfid-panel-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #5b4d78;
+            text-align: center;
+            max-width: 320px;
+        }
+        .rfid-input-wrap {
+            width: 100%;
+            max-width: 360px;
+        }
+        #rfidInput {
+            width: 100%;
+            padding: 16px 18px;
+            font-size: 1.2rem;
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            border: 2px solid #e9d5ff;
+            border-radius: 14px;
+            background: #fff;
+            color: #2b2340;
+            outline: none;
+            box-shadow: 0 4px 18px rgba(168, 85, 247, 0.1);
+        }
+        #rfidInput:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.22);
+        }
+        .rfid-caption {
+            font-size: 0.8rem;
+            color: #8b7aa3;
+            text-align: center;
+            max-width: 340px;
+            line-height: 1.45;
+        }
         @media (min-width: 960px) {
             body { justify-content: flex-start; }
             .app { max-width: none; width: calc(100% - 272px); margin-left: 272px; }
@@ -156,7 +222,7 @@
             <button class="burger" id="drawerToggle" type="button" aria-label="Menu">
                 <span></span><span></span><span></span>
             </button>
-            <div class="title">Presensi Sholat QR</div>
+            <div class="title">Presensi Sholat</div>
         </div>
         <div class="status" id="status">
             <span class="dot"></span>
@@ -165,7 +231,8 @@
     </div>
 
     <div class="content">
-        <div class="scanner-wrap">
+        {{-- QR scanner: disembunyikan; set USE_QR_SCANNER = true di script untuk menampilkan lagi --}}
+        <div id="qrScannerSection" class="scanner-wrap qr-scanner-hidden" aria-hidden="true">
             <video id="video" autoplay playsinline muted></video>
             <canvas id="canvas"></canvas>
             <div class="scan-overlay">
@@ -176,7 +243,16 @@
                 </div>
             </div>
         </div>
-        <div class="hint" id="hint">Arahkan kamera ke QR Code</div>
+        <div class="rfid-panel" id="rfidPanel">
+            <div class="rfid-panel-icon" aria-hidden="true"><i class="fas fa-microchip"></i></div>
+            <div class="rfid-panel-title">Tempelkan kartu pada pembaca RFID</div>
+            <div class="rfid-input-wrap">
+                <label for="rfidInput" class="sr-only">Input nomor kartu RFID</label>
+                <input type="text" id="rfidInput" name="rfid" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Nomor kartu RFID">
+            </div>
+            <p class="rfid-caption">Pembaca yang bertindak sebagai keyboard akan mengisi kolom ini dan mengirim otomatis setelah scan (biasanya tombol Enter).</p>
+        </div>
+        <div class="hint" id="hint">Menunggu tap RFID…</div>
     </div>
 </div>
 
@@ -200,12 +276,14 @@
                 <span>Presensi Sholat</span>
             </a>
         </li>
+        @if(config('presensi.show_haid'))
         <li class="drawer-item">
             <a href="{{ route('presensi-haid.qr') }}" class="drawer-link">
                 <span class="icon"><i class="fas fa-qrcode"></i></span>
                 <span>Presensi Haid</span>
             </a>
         </li>
+        @endif
         <li class="drawer-item">
             <a href="{{ route('presensi.log-marifah') }}" class="drawer-link">
                 <span class="icon"><i class="fas fa-rectangle-list"></i></span>
@@ -250,6 +328,12 @@
 </aside>
 
 <script>
+    /** Ubah ke true untuk menampilkan kembali pemindaian QR (kamera + jsQR). */
+    const USE_QR_SCANNER = false;
+    const POST_PRESENSI_URL = @json(route('presensi-sholat.post-sholat'));
+    const HINT_QR = 'Arahkan kamera ke QR Code';
+    const HINT_RFID_IDLE = 'Menunggu tap RFID…';
+
     const toggleBtn = document.getElementById('drawerToggle');
     const backdrop  = document.getElementById('drawerBackdrop');
     const drawer    = document.getElementById('drawer');
@@ -263,6 +347,8 @@
     const hintEl   = document.getElementById('hint');
     const video    = document.getElementById('video');
     const canvas   = document.getElementById('canvas');
+    const rfidInput = document.getElementById('rfidInput');
+    const qrSection = document.getElementById('qrScannerSection');
 
     let stream    = null;
     let rafId     = null;
@@ -273,6 +359,34 @@
         var c = isReady ? '#22c55e' : '#f59e0b';
         var s = isReady ? '34,197,94' : '245,158,11';
         statusEl.innerHTML = '<span class="dot" style="background:' + c + ';box-shadow:0 0 0 4px rgba(' + s + ',0.12)"></span><span>' + text + '</span>';
+    }
+
+    function focusRfid() {
+        if (!rfidInput || USE_QR_SCANNER) return;
+        rfidInput.value = '';
+        try { rfidInput.focus({ preventScroll: true }); } catch (e) { rfidInput.focus(); }
+    }
+
+    async function submitPresensi(nokartu) {
+        var res = await fetch(POST_PRESENSI_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ nokartu: nokartu })
+        });
+
+        var json = {};
+        try { json = await res.json(); } catch (e) {}
+
+        if (res.ok && json.ok) {
+            await Swal.fire({ icon: 'success', title: 'Berhasil', text: json.message || 'Presensi sholat berhasil.', confirmButtonColor: '#a855f7' });
+        } else {
+            await Swal.fire({ icon: 'error', title: 'Gagal', text: (json && json.message) ? json.message : 'Presensi gagal (HTTP ' + res.status + ').', confirmButtonColor: '#a855f7' });
+        }
     }
 
     function tick() {
@@ -327,7 +441,7 @@
         video.play();
         isScanning = true;
         setStatus('Ready', true);
-        hintEl.textContent = 'Arahkan kamera ke QR Code';
+        hintEl.textContent = HINT_QR;
         rafId = requestAnimationFrame(tick);
     }
 
@@ -354,38 +468,68 @@
         hintEl.textContent = 'Terbaca: ' + nokartu + ' (mengirim...)';
 
         try {
-            var res = await fetch(@json(route('presensi-sholat.post-sholat')), {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': @json(csrf_token()),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ nokartu: nokartu })
-            });
-
-            var json = {};
-            try { json = await res.json(); } catch(e) {}
-
-            if (res.ok && json.ok) {
-                await Swal.fire({ icon: 'success', title: 'Berhasil', text: json.message || 'Presensi sholat berhasil.', confirmButtonColor: '#a855f7' });
-            } else {
-                await Swal.fire({ icon: 'error', title: 'Gagal', text: (json && json.message) ? json.message : 'Presensi gagal (HTTP ' + res.status + ').', confirmButtonColor: '#a855f7' });
-            }
-        } catch(e) {
+            await submitPresensi(nokartu);
+        } catch (e) {
             await Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal mengirim data. Coba lagi.', confirmButtonColor: '#a855f7' });
         } finally {
             isPosting = false;
             setStatus('Ready', true);
-            hintEl.textContent = 'Arahkan kamera ke QR Code';
-            isScanning = true;
-            rafId = requestAnimationFrame(tick);
+            if (USE_QR_SCANNER) {
+                hintEl.textContent = HINT_QR;
+                isScanning = true;
+                rafId = requestAnimationFrame(tick);
+            } else {
+                hintEl.textContent = HINT_RFID_IDLE;
+                focusRfid();
+            }
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        startScanner();
+    if (rfidInput && !USE_QR_SCANNER) {
+        rfidInput.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (isPosting) return;
+            var v = (rfidInput.value || '').trim();
+            if (!v) return;
+
+            isPosting = true;
+            setStatus('Processing...', false);
+            hintEl.textContent = 'Terbaca: ' + v + ' (mengirim...)';
+
+            (async function () {
+                try {
+                    await submitPresensi(v);
+                } catch (err) {
+                    await Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal mengirim data. Coba lagi.', confirmButtonColor: '#a855f7' });
+                } finally {
+                    isPosting = false;
+                    setStatus('Ready', true);
+                    hintEl.textContent = HINT_RFID_IDLE;
+                    focusRfid();
+                }
+            })();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var rfidPanel = document.getElementById('rfidPanel');
+        if (USE_QR_SCANNER) {
+            if (rfidPanel) rfidPanel.classList.add('rfid-panel-hidden');
+            if (qrSection) {
+                qrSection.classList.remove('qr-scanner-hidden');
+                qrSection.setAttribute('aria-hidden', 'false');
+            }
+            startScanner();
+        } else {
+            setStatus('Ready', true);
+            hintEl.textContent = HINT_RFID_IDLE;
+            focusRfid();
+        }
+    });
+
+    window.addEventListener('focus', function () {
+        if (!USE_QR_SCANNER && !isPosting) focusRfid();
     });
 </script>
 </body>

@@ -29,6 +29,10 @@ class PresensiSholatController extends Controller
             return redirect()->route('dashboard');
         }
 
+        if (! config('presensi.show_haid')) {
+            return redirect()->route('presensi-sholat.qr');
+        }
+
         return view('presensi_haid_qr');
     }
 
@@ -66,7 +70,7 @@ class PresensiSholatController extends Controller
                 'username' => $username,
                 'nokartu' => $validated['nokartu'],
                 'payload' => $payload,
-                'token_preview' => substr($token, 0, 40) . '...',
+                'token' => $token,
             ]);
 
             $response = $this->presensiHttp(15)
@@ -152,6 +156,13 @@ class PresensiSholatController extends Controller
             ], 403);
         }
 
+        if (! config('presensi.show_haid')) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Fitur presensi haid tidak aktif.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'nokartu' => ['required', 'string', 'min:1', 'max:255'],
         ]);
@@ -177,7 +188,7 @@ class PresensiSholatController extends Controller
                 'username' => $username,
                 'nokartu' => $validated['nokartu'],
                 'payload' => $payload,
-                'token_preview' => substr($token, 0, 40) . '...',
+                'token' => $token,
             ]);
 
             $response = $this->presensiHttp(15)
